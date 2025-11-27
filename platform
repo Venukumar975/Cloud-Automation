@@ -1,0 +1,47 @@
+#!/bin/bash
+
+COMMAND=$1
+ACTION=$2
+FLAG=$3
+
+# ───────────────────────────────────────────────
+# DEPLOY INFRA
+# ───────────────────────────────────────────────
+if [[ "$COMMAND" == "deploy" && "$ACTION" == "infra" ]]; then
+
+  if [[ "$FLAG" == "--local" ]]; then
+    echo "🚀 Running Terraform locally..."
+    python3 scripts/generate_tfvars.py platform-config.yaml 2>/dev/null || python scripts/generate_tfvars.py platform-config.yaml
+    cd infra/env/prod
+    terraform init
+    terraform apply -auto-approve
+    exit 0
+  fi
+
+  # Default: deploy via Docker
+  ./scripts/check_aws.sh && ./scripts/apply_infra.sh
+  exit 0
+fi
+
+# ───────────────────────────────────────────────
+# DESTROY INFRA
+# ───────────────────────────────────────────────
+if [[ "$COMMAND" == "destroy" && "$ACTION" == "infra" ]]; then
+
+  if [[ "$FLAG" == "--local" ]]; then
+    echo "🧨 Destroying Terraform Infrastructure locally..."
+    cd infra/env/prod
+    terraform destroy -auto-approve
+    exit 0
+  fi
+
+  ./scripts/check_aws.sh && ./scripts/destroy_infra.sh
+  exit 0
+fi
+
+# ───────────────────────────────────────────────
+# INVALID COMMAND
+# ───────────────────────────────────────────────
+echo "Usage:"
+echo "  ./platform deploy infra [--local]"
+echo "  ./platform destroy infra [--local]"

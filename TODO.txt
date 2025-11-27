@@ -1,0 +1,6 @@
+script auto detects os now, make the apply_infra file changes as per that
+put the vars in a folder for user to change and then read em
+    { gitbash config, .aws home}
+put s3 bucket for backend
+
+see about missing vars in plat.yaml

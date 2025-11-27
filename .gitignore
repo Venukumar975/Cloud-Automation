@@ -1,0 +1,7 @@
+# terraform things
+infra/env/prod/.terraform
+infra/env/prod/terraform.tfvars
+infra/env/prod/tfplan
+infra/env/prod/terraform.tfstate
+infra/env/prod/terraform.tfstate.ba
+infra/env/prod/.terraform.lock.hcl
