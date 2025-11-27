@@ -1,28 +1,27 @@
 {
-  "project": "myapp",
+  "apps": {
+    "backend": {
+      "source_1": {
+        "directory": "app/backend_api",
+        "type": "node",
+        "version": "18",
+        "install-command": "npm install",
+        "test-command": "npm test || echo \"no tests\"",
+        "build-command": "echo \"no build needed\"",
 
-  "backend": {
-    "enabled": true,
-    "type": "node",
-    "directory": "backend",
-    "install": "npm install",
-    "test": "npm test",
-    "build": "npm run build",
+        "app-env": ["PORT", "JWT_SECRET", "QR_JWT_SECRET"]
+      }
+    },
 
-    "env": {
-      "JWT_SECRET": true,
-      "QR_JWT_SECRET": true,
-      "MYSQL_DATABASE": "attendance_db",
-      "TEST": true
+    "frontend": {
+      "source_2": {
+        "directory": "app/teacher_app",
+        "type": "node",
+        "version": "18",
+        "install-command": "npm install",
+        "test-command": "npm test || echo \"no tests\"",
+        "build-command": "npm run build"
+      }
     }
-  },
-
-  "frontend": {
-    "enabled": true,
-    "type": "react",
-    "directory": "frontend",
-    "install": "npm install",
-    "test": "npm test",
-    "build": "npm run build"
   }
 }
