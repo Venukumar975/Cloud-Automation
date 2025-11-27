@@ -1,0 +1,30 @@
+name: "Deploy to ASG"
+description: "Updates image in SSM and triggers ASG rolling deploy"
+
+inputs:
+  asg_name:
+    required: true
+  ssm_param:
+    required: true
+  image_uri:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Update image in SSM
+      shell: bash
+      run: |
+        aws ssm put-parameter \
+          --name "${{ inputs.ssm_param }}" \
+          --type "String" \
+          --value "${{ inputs.image_uri }}" \
+          --overwrite
+
+    - name: Trigger rolling update
+      shell: bash
+      run: |
+        aws autoscaling start-instance-refresh \
+          --auto-scaling-group-name "${{ inputs.asg_name }}" \
+          --strategy "Rolling" \
+          --preferences '{"MinHealthyPercentage":80,"InstanceWarmup":60}'

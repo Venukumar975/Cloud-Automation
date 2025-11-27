@@ -1,0 +1,28 @@
+{
+  "project": "myapp",
+
+  "backend": {
+    "enabled": true,
+    "type": "node",
+    "directory": "backend",
+    "install": "npm install",
+    "test": "npm test",
+    "build": "npm run build",
+
+    "env": {
+      "JWT_SECRET": true,
+      "QR_JWT_SECRET": true,
+      "MYSQL_DATABASE": "attendance_db",
+      "TEST": true
+    }
+  },
+
+  "frontend": {
+    "enabled": true,
+    "type": "react",
+    "directory": "frontend",
+    "install": "npm install",
+    "test": "npm test",
+    "build": "npm run build"
+  }
+}

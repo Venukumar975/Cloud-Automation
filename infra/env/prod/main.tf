@@ -95,3 +95,29 @@ module "ci_cd_iam" {
   github_owner = var.owner
   github_repo  = var.repo
 }
+
+
+resource "local_file" "deployment_config" {
+  filename = "${path.root}/deployment-config.yaml"
+
+  content = yamlencode({
+    backend = {
+      "backend" = {
+        image_repo          = module.ecr.ecr_repo_urls["backend"]
+        launch_template_id  = module.compute.launch_template_id
+        asg_name            = module.compute.asg_name
+        region              = var.region
+        port                = var.app_port
+        ssm_param_name      = "/${var.project_name}/compute/backend/image_tag"
+      }
+    }
+
+    frontend = var.frontend_enabled ? {
+      "frontend-app" = {
+        bucket        = module.frontend[0].bucket_name
+        region        = var.region
+        cloudfront_id = module.frontend[0].cloudfront_distribution_id
+      }
+    } : {}
+  })
+}

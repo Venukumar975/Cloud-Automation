@@ -1,0 +1,55 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "App/teacher_app/**"
+      - ".github/**"
+      - "config.json"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup / Build Frontend
+        id: setup
+        uses: ./.github/actions/setup
+        with:
+          app-id: source_2
+          config-path: ./config.json
+
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: frontend-ci
+
+      - name: Get S3 bucket name from SSM
+        id: s3
+        env:
+          PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
+        run: |
+          BUCKET=$(aws ssm get-parameter \
+            --name "/$PROJECT_NAME/frontend/bucket" \
+            --query "Parameter.Value" \
+            --output text)
+          echo "bucket=$BUCKET" >> "$GITHUB_OUTPUT"
+
+      - name: Sync build output to S3
+        run: |
+          aws s3 sync \
+            "${{ steps.setup.outputs.directory }}/dist" \
+            "s3://${{ steps.s3.outputs.bucket }}" \
+            --delete
+
+          echo "Frontend deployed to s3://${{ steps.s3.outputs.bucket }}"

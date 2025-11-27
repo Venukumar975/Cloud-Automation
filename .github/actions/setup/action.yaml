@@ -1,0 +1,85 @@
+name: "Setup Tech Stack"
+description: "Detect app type from config.json and install/build"
+
+inputs:
+  app-id:
+    description: "Key of the app in config.json"
+    required: true
+  config-path:
+    description: "Path to config.json"
+    required: true
+    default: ./config.json
+
+outputs:
+  directory:
+    description: "Directory of the app"
+    value: ${{ steps.read.outputs.directory }}
+  type:
+    description: "Runtime type"
+    value: ${{ steps.read.outputs.type }}
+  version:
+    description: "Runtime version"
+    value: ${{ steps.read.outputs.version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Read app config
+      id: read
+      shell: bash
+      run: |
+        CONFIG_PATH="${{ inputs.config-path }}"
+        APP_ID="${{ inputs.app-id }}"
+
+        if [ ! -f "$CONFIG_PATH" ]; then
+          echo "config.json not found at $CONFIG_PATH"
+          exit 1
+        fi
+
+        APP=$(jq -c \
+          --arg id "$APP_ID" \
+          '.apps.backend[$id] // .apps.frontend[$id]' \
+          "$CONFIG_PATH")
+
+        if [[ "$APP" == "null" || -z "$APP" ]]; then
+          echo "App ID '$APP_ID' not found in config.json"
+          exit 1
+        fi
+
+        DIR=$(echo "$APP" | jq -r '.directory')
+        TYPE=$(echo "$APP" | jq -r '.type')
+        VER=$(echo "$APP" | jq -r '.version // ""')
+        INSTALL=$(echo "$APP" | jq -r '."install-command" // ""')
+        TEST_CMD=$(echo "$APP" | jq -r '."test-command" // ""')
+        BUILD_CMD=$(echo "$APP" | jq -r '."build-command" // ""')
+
+        echo "directory=$DIR"     >> "$GITHUB_OUTPUT"
+        echo "type=$TYPE"         >> "$GITHUB_OUTPUT"
+        echo "version=$VER"       >> "$GITHUB_OUTPUT"
+        echo "install_cmd=$INSTALL" >> "$GITHUB_OUTPUT"
+        echo "test_cmd=$TEST_CMD"   >> "$GITHUB_OUTPUT"
+        echo "build_cmd=$BUILD_CMD" >> "$GITHUB_OUTPUT"
+
+    - name: Setup Node.js
+      if: ${{ steps.read.outputs.type == 'node' }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ steps.read.outputs.version }}
+
+    - name: Install dependencies
+      if: ${{ steps.read.outputs.install_cmd != '' }}
+      shell: bash
+      working-directory: ${{ steps.read.outputs.directory }}
+      run: ${{ steps.read.outputs.install_cmd }}
+
+    - name: Run tests
+      if: ${{ steps.read.outputs.test_cmd != '' }}
+      shell: bash
+      working-directory: ${{ steps.read.outputs.directory }}
+      run: ${{ steps.read.outputs.test_cmd }}
+
+    - name: Build app
+      if: ${{ steps.read.outputs.build_cmd != '' }}
+      shell: bash
+      working-directory: ${{ steps.read.outputs.directory }}
+      run: ${{ steps.read.outputs.build_cmd }}
