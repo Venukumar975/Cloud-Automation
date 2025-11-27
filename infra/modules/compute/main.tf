@@ -134,6 +134,23 @@ resource "aws_autoscaling_group" "app_asg" {
     propagate_at_launch = true
   }
 }
+# 🔹 Simple Scale Out Policy (step scaling)
+resource "aws_autoscaling_policy" "scale_out" {
+  name                   = "${local.name}-scale-out"
+  autoscaling_group_name = aws_autoscaling_group.app_asg.name
+  adjustment_type        = "ChangeInCapacity"
+  scaling_adjustment     = 1
+  cooldown               = 60
+}
+
+# 🔹 Simple Scale In Policy (step scaling)
+resource "aws_autoscaling_policy" "scale_in" {
+  name                   = "${local.name}-scale-in"
+  autoscaling_group_name = aws_autoscaling_group.app_asg.name
+  adjustment_type        = "ChangeInCapacity"
+  scaling_adjustment     = -1
+  cooldown               = 60
+}
 
 # 🔹 Target Tracking Scaling Policy (CPU-based)
 resource "aws_autoscaling_policy" "cpu_target_tracking" {
@@ -154,3 +171,21 @@ resource "aws_autoscaling_policy" "cpu_target_tracking" {
   }
 }
 
+resource "aws_ssm_parameter" "launch_template_id" {
+  name           = "/${var.project_name}/compute/${var.service_name}/launch_template_id"
+  type           = "String"
+  insecure_value = aws_launch_template.app.id
+}
+
+
+resource "aws_ssm_parameter" "container_port" {
+  name  = "/${var.project_name}/compute/${var.service_name}/port"
+  type  = "String"
+  value = var.container_port
+}
+
+resource "aws_ssm_parameter" "image_tag" {
+  name  = "/${var.project_name}/compute/${var.service_name}/image_tag"
+  type  = "String"
+  value = "latest"
+}

@@ -29,3 +29,13 @@ variable "health_check_interval" {
   type    = number
   default = 30
 }
+
+variable "service_name" {
+  description = "Name of the backend service"
+  type        = string
+}
+
+variable "container_port" {
+  description = "Port the backend app listens on"
+  type        = number
+}

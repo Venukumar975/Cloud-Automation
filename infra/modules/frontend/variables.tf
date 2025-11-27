@@ -5,3 +5,4 @@ variable "project_name" {
 variable "enable_frontend" {
   type = bool
 }
+

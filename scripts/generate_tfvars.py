@@ -62,6 +62,8 @@ def to_hcl(value):
         return "[" + ", ".join(f"\"{v}\"" for v in value) + "]"
     return f"\"{value}\""
 
+# ---- CI_CD_IAM varables -----
+
 # ---- WRITE terraform.tfvars FILE ----
 output_path = "infra/env/prod/terraform.tfvars"
 
@@ -69,5 +71,5 @@ with open(output_path, "w") as f:
     for key, value in flat.items():
         f.write(f"{key} = {to_hcl(value)}\n")
 
-print(f"🎉 Generated {output_path}")
+print(f"Generated {output_path}")
 

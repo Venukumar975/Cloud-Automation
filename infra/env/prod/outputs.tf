@@ -30,3 +30,7 @@ output "frontend_bucket" {
 output "cloudwatch_logs" {
   value = module.monitoring.log_group_path
 }
+
+output "ecr_repos" {
+  value = module.ecr.ecr_repo_urls
+}

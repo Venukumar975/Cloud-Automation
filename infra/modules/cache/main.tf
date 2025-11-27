@@ -56,3 +56,14 @@ resource "aws_elasticache_cluster" "redis" {
     Name = local.name
   }
 }
+
+# resource "aws_ssm_parameter" "redis_endpoint" {
+#   name           = "/${var.project_name}/cache/endpoint"
+#   type           = "String"
+#   insecure_value = aws_elasticache_cluster.redis.configuration_endpoint
+# }
+
+
+
+
+

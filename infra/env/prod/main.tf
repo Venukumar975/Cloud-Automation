@@ -27,6 +27,8 @@ module "compute" {
   max_size         = var.max_instances
   desired_capacity = var.desired_instances
   instance_profile_name = module.ssm_iam.instance_profile_name
+  service_name = "backend"
+  container_port = var.app_port
 }
 
 
@@ -63,10 +65,10 @@ module "cache" {
 module "frontend" {
   count           = var.frontend_enabled ? 1 : 0
   source          = "../../modules/frontend"
-
   project_name    = var.project_name
   enable_frontend = var.frontend_enabled
 }
+
 
 module "monitoring" {
   source = "../../modules/monitoring"
@@ -75,4 +77,20 @@ module "monitoring" {
   asg_name                  = module.compute.asg_name
   asg_policy_scale_out_arn  = module.compute.scale_out_policy_arn
   asg_policy_scale_in_arn   = module.compute.scale_in_policy_arn
+}
+
+module "ecr" {
+  source       = "../../modules/ecr"
+  project_name = var.project_name
+  environment  = "prod"
+  services     = ["backend"] # or ["backend", "auth", "teacher-api"]
+}
+
+
+module "ci_cd_iam" {
+  source       = "../../modules/ci_cd_iam"
+  project_name = var.project_name
+
+  github_owner = var.owner
+  github_repo  = var.repo
 }

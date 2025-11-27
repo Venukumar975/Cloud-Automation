@@ -23,10 +23,21 @@ variable "db_storage" { type = number }
 variable "db_multi_az" { type = bool }
 variable "db_public" { type = bool }
 variable "multi_az" { type = bool }
+
 # Cache Flags
 variable "enable_redis" { type = bool }
 variable "cache_node_type" { type = string }
 variable "cache_num_nodes" { type = number }
+
 # frontend flags
 variable "frontend_enabled" { type = bool }
- 
+
+ # ecr vars
+ variable "services" {
+  type    = list(string)
+  default = ["backend"]
+}
+
+# ci_cd_vars
+variable "owner" { type = string }
+variable "repo"  { type = string }

@@ -81,3 +81,4 @@ resource "aws_db_instance" "db" {
     Name = local.name
   }
 }
+

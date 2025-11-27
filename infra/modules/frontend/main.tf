@@ -59,6 +59,35 @@ resource "aws_s3_bucket_policy" "frontend_policy" {
   policy = data.aws_iam_policy_document.s3_cf_policy.json
 }
 
+######################################
+# CloudFront SPA Redirect Function
+######################################
+resource "aws_cloudfront_function" "spa_redirect" {
+  name    = "${var.project_name}-spa-redirect"
+  runtime = "cloudfront-js-1.0"
+  publish = true
+
+  code = <<EOF
+function handler(event) {
+  var request = event.request;
+  var uri = request.uri;
+
+  // If the path has no file extension, serve index.html
+  if (!uri.includes('.') && !uri.endsWith('/')) {
+    request.uri = '/index.html';
+  }
+  
+  // If the request ends with a slash, serve index.html
+  if (uri.endsWith('/')) {
+    request.uri = '/index.html';
+  }
+
+  return request;
+}
+EOF
+}
+
+
 ########################################
 # CloudFront Distribution
 ########################################
@@ -78,17 +107,15 @@ resource "aws_cloudfront_distribution" "cdn" {
   default_cache_behavior {
     target_origin_id       = "s3-frontend"
     viewer_protocol_policy = "redirect-to-https"
-
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
     compress         = true
+    cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    origin_request_policy_id = "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf"
 
-    forwarded_values {
-      query_string = true
-
-      cookies {
-        forward = "all"
-      }
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.spa_redirect.arn
     }
   }
 
@@ -109,3 +136,17 @@ resource "aws_cloudfront_distribution" "cdn" {
     Name = local.name
   }
 }
+
+resource "aws_ssm_parameter" "frontend_bucket" {
+  name  = "/${var.project_name}/frontend/bucket"
+  type  = "String"
+  value = aws_s3_bucket.frontend.bucket
+}
+
+resource "aws_ssm_parameter" "frontend_cdn" {
+  name  = "/${var.project_name}/frontend/cdn_domain"
+  type  = "String"
+  value = aws_cloudfront_distribution.cdn.domain_name
+}
+
+
