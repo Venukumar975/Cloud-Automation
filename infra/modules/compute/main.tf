@@ -62,8 +62,10 @@ resource "aws_launch_template" "app" {
   instance_type = var.instance_type
 
   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
-    project_name = var.project_name
-    app_port = var.app_port
+  project_name  = var.project_name
+  service_name  = var.service_name
+  app_port      = var.app_port
+  region        = var.region
   }))
 
   vpc_security_group_ids = [aws_security_group.app_sg.id]
@@ -71,7 +73,6 @@ resource "aws_launch_template" "app" {
       iam_instance_profile {
     name = var.instance_profile_name
   }
-
 
 }
 
@@ -188,4 +189,10 @@ resource "aws_ssm_parameter" "image_tag" {
   name  = "/${var.project_name}/compute/${var.service_name}/image_tag"
   type  = "String"
   value = "latest"
+}
+
+resource "aws_ssm_parameter" "image_uri" {
+  name  = "/${var.project_name}/compute/${var.service_name}/image_uri"
+  type  = "String"
+  value = "dummy" # overwritten by CI/CD
 }

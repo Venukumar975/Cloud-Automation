@@ -29,6 +29,7 @@ module "compute" {
   instance_profile_name = module.ssm_iam.instance_profile_name
   service_name = "backend"
   container_port = var.app_port
+  region = var.region
 }
 
 

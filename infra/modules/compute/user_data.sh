@@ -1,12 +1,25 @@
 #!/bin/bash
+set -e
+
+# SERVICE="${service_name}"
+# PROJECT="${project_name}"
+# PORT="${app_port}"
+# REGION="${region}"
+
 apt-get update -y
-apt-get install -y nginx
+apt-get install -y docker.io awscli
+systemctl enable docker
+systemctl start docker
 
-# Listen on the application port instead of 80
-sed -i "s/listen 80 default_server;/listen ${app_port} default_server;/g" /etc/nginx/sites-enabled/default
-sed -i "s/listen \[::\]:80 default_server;/listen \[::\]:${app_port} default_server;/g" /etc/nginx/sites-enabled/default
+IMAGE=$(aws ssm get-parameter \
+  --name "/${project_name}/compute/${service_name}/image_uri" \
+  --query "Parameter.Value" \
+  --output text \
+  --region "${region}")
 
-echo "Hello from ${project_name} Compute Module" > /var/www/html/index.html
+docker pull "$IMAGE"
 
-systemctl restart nginx
-systemctl enable nginx
+docker stop app || true
+docker rm app || true
+
+docker run -d --name app --restart always -p ${app_port}:${app_port} "$IMAGE"

@@ -1,5 +1,6 @@
 variable "project_name" { type = string }
 variable "vpc_id"       { type = string }
+variable "region" {type = string}
 
 variable "public_subnets"  { type = list(string) }
 variable "private_subnets" { type = list(string) }
@@ -10,6 +11,7 @@ variable "app_port"      { type = number }
 variable "min_size"         { type = number }
 variable "max_size"         { type = number }
 variable "desired_capacity" { type = number }
+
 
 variable "instance_profile_name" {
   type = string
@@ -38,4 +40,5 @@ variable "service_name" {
 variable "container_port" {
   description = "Port the backend app listens on"
   type        = number
+  default = 3000
 }
