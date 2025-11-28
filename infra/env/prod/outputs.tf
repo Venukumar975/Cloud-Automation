@@ -34,3 +34,7 @@ output "cloudwatch_logs" {
 output "ecr_repos" {
   value = module.ecr.ecr_repo_urls
 }
+
+output "cloudfront_id" {
+  value = module.frontend[0].cloudfront_distribution_id
+}

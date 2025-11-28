@@ -149,4 +149,9 @@ resource "aws_ssm_parameter" "frontend_cdn" {
   value = aws_cloudfront_distribution.cdn.domain_name
 }
 
+resource "aws_ssm_parameter" "frontend_cdn_id" {
+  name  = "/${var.project_name}/frontend/cdn_id"
+  type  = "String"
+  value = aws_cloudfront_distribution.cdn.id
+}
 
