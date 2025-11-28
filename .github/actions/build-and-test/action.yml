@@ -1,83 +1,85 @@
-name: "Build and Test"
-description: "Build and test application based on stack configuration"
+name: 'Build and Test'
+description: 'Build and test application based on stack configuration'
 
 inputs:
   app-type:
-    description: "Type of application (frontend/backend)"
+    description: 'Type of application (frontend/backend)'
     required: true
   app-id:
-    description: "ID of the application"
+    description: 'ID of the application'
     required: true
   config-path:
-    description: "Path to config.json"
+    description: 'Path to config.json'
     required: true
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: Install jq
       shell: bash
       run: sudo apt-get install -y jq
 
-    - name: Load config
-      id: config
+    - name: Load config and setup
+      id: setup
       shell: bash
       run: |
+        # Load config
         CFG=$(jq -c --arg type "${{ inputs.app-type }}" --arg id "${{ inputs.app-id }}" \
           '.apps[$type][$id]' "${{ inputs.config-path }}")
-
+        
+        # Extract values
         STACK=$(echo "$CFG" | jq -r '.type')
         DIR=$(echo "$CFG" | jq -r '.directory')
         INSTALL_CMD=$(echo "$CFG" | jq -r '.["install-command"]')
         BUILD_CMD=$(echo "$CFG" | jq -r '.["build-command"]')
         TEST_CMD=$(echo "$CFG" | jq -r '.["test-command"] // "echo No tests configured"')
-
-        echo "STACK=$STACK" >> $GITHUB_ENV
-        echo "DIR=$DIR" >> $GITHUB_ENV
-        echo "INSTALL_CMD='$INSTALL_CMD'" >> $GITHUB_ENV
-        echo "BUILD_CMD='$BUILD_CMD'" >> $GITHUB_ENV
-        echo "TEST_CMD='$TEST_CMD'" >> $GITHUB_ENV
+        
+        # Output values
+        echo "stack=$STACK" >> $GITHUB_OUTPUT
+        echo "dir=$DIR" >> $GITHUB_OUTPUT
+        echo "install_cmd=$INSTALL_CMD" >> $GITHUB_OUTPUT
+        echo "build_cmd=$BUILD_CMD" >> $GITHUB_OUTPUT
+        echo "test_cmd=$TEST_CMD" >> $GITHUB_OUTPUT
 
     - name: Setup Node.js
-      if: ${{ env.STACK == 'node' }}
+      if: ${{ steps.setup.outputs.stack == 'node' }}
       uses: actions/setup-node@v3
       with:
-        node-version: "18"
-        ##cache: 'npm'
+        node-version: '18'
 
     - name: Setup Python
-      if: ${{ env.STACK == 'python' }}
+      if: ${{ steps.setup.outputs.stack == 'python' }}
       uses: actions/setup-python@v4
       with:
-        python-version: "3.x"
-        #cache: 'pip'
+        python-version: '3.x'
 
     - name: Setup Java
-      if: ${{ env.STACK == 'java' || env.STACK == 'gradle' }}
+      if: ${{ steps.setup.outputs.stack == 'java' || steps.setup.outputs.stack == 'gradle' }}
       uses: actions/setup-java@v3
       with:
-        distribution: "temurin"
-        java-version: "17"
-        #cache: 'gradle'
+        distribution: 'temurin'
+        java-version: '17'
 
     - name: Install Dependencies
       shell: bash
-      working-directory: ${{ env.DIR }}
-      run: eval "$INSTALL_CMD"
+      working-directory: ${{ steps.setup.outputs.dir }}
+      run: ${{ steps.setup.outputs.install_cmd }}
 
     - name: Run Tests
       shell: bash
-      working-directory: ${{ env.DIR }}
-      run: eval "$TEST_CMD"
+      working-directory: ${{ steps.setup.outputs.dir }}
+      run: ${{ steps.setup.outputs.test_cmd }}
 
     - name: Build
       shell: bash
-      working-directory: ${{ env.DIR }}
-      run: eval "$BUILD_CMD"
+      working-directory: ${{ steps.setup.outputs.dir }}
+      run: ${{ steps.setup.outputs.build_cmd }}
+      if: ${{ steps.setup.outputs.build_cmd != '' }}
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: frontend-${{ inputs.app-id }}
-        path: ${{ env.DIR }}/build
+        path: ${{ steps.setup.outputs.dir }}/build
+        if-no-files-found: warn
         retention-days: 1
