@@ -92,8 +92,8 @@ module "ci_cd_iam" {
   source       = "../../modules/ci_cd_iam"
   project_name = var.project_name
 
-  github_owner = var.owner
-  github_repo  = var.repo
+  owner = var.owner
+  repo  = var.repo
 }
 
 

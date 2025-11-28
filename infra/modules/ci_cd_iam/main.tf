@@ -15,13 +15,12 @@ resource "aws_iam_role" "github_actions" {
       {
         Effect = "Allow",
         Principal = {
-          Federated = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+          Federated = aws_iam_openid_connect_provider.github.arn
         },
         Action = "sts:AssumeRoleWithWebIdentity",
         Condition = {
           StringLike = {
-            # Restrict to ONLY this repo (Template Repo)
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_owner}/${var.github_repo}:*"
+            "token.actions.githubusercontent.com:sub" = "repo:${var.owner}/${var.repo}:*"
           },
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
@@ -31,6 +30,7 @@ resource "aws_iam_role" "github_actions" {
     ]
   })
 }
+
 
 resource "aws_iam_policy" "github_actions_policy" {
   name = "${local.name}-policy"
@@ -81,6 +81,20 @@ resource "aws_iam_policy" "github_actions_policy" {
     ]
   })
 }
+
+resource "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+
+  client_id_list = [
+    "sts.amazonaws.com"
+  ]
+
+  thumbprint_list = [
+    # GitHub Actions root CA thumbprint
+    "6938fd4d98bab03faadb97b34396831e3780aea1"
+  ]
+}
+
 
 # Attach Role + Policy
 resource "aws_iam_role_policy_attachment" "github_attach" {
