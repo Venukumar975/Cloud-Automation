@@ -13,73 +13,12 @@ permissions:
 
 env:
   SSM_PREFIX: /hosting-template/compute/backend
+  CI_ECR_PREFIX: /hosting-template/ci/ecr/backend
   DEFAULT_AWS_REGION: ap-south-1
 
 jobs:
-  ####################################################################
-  #                            PREPARE                               #
-  ####################################################################
-  prepare:
+  deploy-single-backend:
     runs-on: ubuntu-latest
-    outputs:
-      app-ids: ${{ steps.ids.outputs.ids }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS for SSM read
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-region: ${{ env.DEFAULT_AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          role-session-name: prepare-ssm
-
-      - name: Install jq
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y jq
-
-      - name: List SSM modules
-        id: ids
-        shell: bash
-        run: |
-          set -euo pipefail
-          PREFIX="${{ env.SSM_PREFIX }}"
-
-          NAMES=$(aws ssm get-parameters-by-path \
-            --path "$PREFIX" \
-            --recursive \
-            --query 'Parameters[].Name' \
-            --output json)
-
-          if [ "$(echo "$NAMES" | jq 'length')" -eq 0 ]; then
-            echo "No modules under $PREFIX"
-            echo "ids=[]" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          IDS=$(
-            echo "$NAMES" | jq -r '.[]' \
-            | sed "s|^${PREFIX}/||" \
-            | awk -F'/' '{print $1}' \
-            | sort -u \
-            | jq -R -s -c 'split("\n")[:-1]'
-          )
-
-          echo "ids=$IDS" >> $GITHUB_OUTPUT
-
-  ####################################################################
-  #                            DEPLOY                                #
-  ####################################################################
-  deploy:
-    needs: prepare
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        app-id: ${{ fromJson(needs.prepare.outputs.app-ids) }}
-      fail-fast: false
-
     steps:
       - uses: actions/checkout@v4
 
@@ -95,28 +34,39 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y jq
 
-      - name: Read module config from SSM
+      - name: Read service config from SSM (single-service)
         id: parse
         shell: bash
         run: |
           set -euo pipefail
+
           PREFIX="${{ env.SSM_PREFIX }}"
-          ID="${{ matrix.app-id }}"
 
-          KEYS=(image_repo asg_name image_uri region port health_path instance_warmup min_healthy_percent user_data_template ssm_param_name)
+          # Keys we expect at /.../backend/<key>
+          KEYS=(image_repo image_uri asg_name region port health_path instance_warmup min_healthy_percent user_data_template ssm_param_name)
 
+          # Try to retrieve each key (silently empty if missing)
           for k in "${KEYS[@]}"; do
-            P="${PREFIX}/${ID}/${k}"
+            P="${PREFIX}/${k}"
             V=$(aws ssm get-parameter --name "$P" --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || echo "")
             echo "${k}=$V" >> $GITHUB_OUTPUT
           done
 
+          # fallback: if image_repo missing, check CI prefix where CI writes the repo
+          if [ -z "${{ steps.parse.outputs.image_repo }}" ] ; then
+            CI_REPO_PARAM="${{ env.CI_ECR_PREFIX }}/repo"
+            CI_REPO=$(aws ssm get-parameter --name "$CI_REPO_PARAM" --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+            if [ -n "$CI_REPO" ]; then
+              echo "image_repo=$CI_REPO" >> $GITHUB_OUTPUT
+            fi
+          fi
+
       - name: Debug module config
         run: |
-          echo "Module: ${{ matrix.app-id }}"
           echo "image_repo: ${{ steps.parse.outputs.image_repo }}"
-          echo "asg_name: ${{ steps.parse.outputs.asg_name }}"
-          echo "region: ${{ steps.parse.outputs.region }}"
+          echo "image_uri: ${{ steps.parse.outputs.image_uri }}"
+          echo "asg_name : ${{ steps.parse.outputs.asg_name }}"
+          echo "region   : ${{ steps.parse.outputs.region }}"
           echo "ssm_param_name: ${{ steps.parse.outputs.ssm_param_name }}"
 
       - name: Update SSM Param with new image
@@ -124,10 +74,14 @@ jobs:
         shell: bash
         run: |
           IMAGE="${{ steps.parse.outputs.image_repo }}:${{ github.sha }}"
+          if [ -z "$IMAGE" ] || [[ "$IMAGE" == ":${{ github.sha }}" ]]; then
+            echo "::error::image_repo is empty; cannot form image uri"
+            exit 1
+          fi
 
           TARGET="${{ steps.parse.outputs.ssm_param_name }}"
           if [ -z "$TARGET" ]; then
-            TARGET="${{ env.SSM_PREFIX }}/${{ matrix.app-id }}/image_uri"
+            TARGET="${{ env.SSM_PREFIX }}/image_uri"
           fi
 
           echo "Updating $TARGET -> $IMAGE"
@@ -140,7 +94,7 @@ jobs:
         run: |
           ASG="${{ steps.parse.outputs.asg_name }}"
           if [ -z "$ASG" ]; then
-            echo "No ASG for module, skipping"
+            echo "No ASG configured, skipping instance refresh"
             echo "refresh_id=" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -169,17 +123,9 @@ jobs:
         shell: bash
         run: |
           PREFIX="${{ env.SSM_PREFIX }}"
-          ID="${{ matrix.app-id }}"
-
-          STABLE="${PREFIX}/${ID}/stable_image_uri"
-
-          PREV=$(aws ssm get-parameter \
-            --name "$STABLE" \
-            --query "Parameter.Value" \
-            --output text 2>/dev/null || echo "")
-
+          STABLE="${PREFIX}/stable_image_uri"
+          PREV=$(aws ssm get-parameter --name "$STABLE" --query "Parameter.Value" --output text 2>/dev/null || echo "")
           echo "PREV_IMAGE=$PREV" >> $GITHUB_ENV
-
           CURRENT="${{ steps.parse.outputs.image_repo }}:${{ github.sha }}"
           echo "CURRENT_IMAGE=$CURRENT" >> $GITHUB_ENV
 
@@ -203,8 +149,7 @@ jobs:
             echo "Status: $S"
 
             if [ "$S" = "Successful" ]; then
-              # now mark this version stable
-              STABLE="${{ env.SSM_PREFIX }}/${{ matrix.app-id }}/stable_image_uri"
+              STABLE="${{ env.SSM_PREFIX }}/stable_image_uri"
               aws ssm put-parameter --name "$STABLE" --value "${{ env.CURRENT_IMAGE }}" --type String --overwrite
               exit 0
             fi
@@ -222,11 +167,7 @@ jobs:
         if: steps.wait.outcome == 'failure' && env.PREV_IMAGE != ''
         shell: bash
         run: |
-          PREFIX="${{ env.SSM_PREFIX }}"
-          ID="${{ matrix.app-id }}"
-
-          TARGET="${PREFIX}/${ID}/image_uri"
-
+          TARGET="${{ env.SSM_PREFIX }}/image_uri"
           echo "Rollback to ${PREV_IMAGE}"
           aws ssm put-parameter --name "$TARGET" --value "${PREV_IMAGE}" --type String --overwrite
 

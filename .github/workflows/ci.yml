@@ -27,15 +27,13 @@ jobs:
         shell: bash
         run: |
           echo "🔍 Reading config.json..."
-
           if [ ! -f config.json ]; then
             echo "❌ config.json missing!"
             exit 1
           fi
 
-          # Read only backend keys
+          # Read only backend keys (unchanged)
           BACKEND=$(jq -c '.apps.backend | keys // []' config.json)
-
           echo "Backend modules: $BACKEND"
 
           # Output backend modules as matrix
@@ -95,7 +93,7 @@ jobs:
           for t in $TARGETS; do
             t_trimmed=$(echo "$t" | xargs)
             [ -z "$t_trimmed" ] && continue
-            
+
             if [[ "$t_trimmed" == /* ]]; then
                CLEAN_PATH="${t_trimmed#/}"
             else
@@ -142,6 +140,14 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
         run: |
           docker build -t "$ECR:latest" "$APP_DIR"
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            docker push "$ECR:latest"
-          fi
+          # Tag commit SHA too
+          docker tag "$ECR:latest" "$ECR:${COMMIT_SHA}"
+
+      - name: Push Docker images (if not PR)
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          ECR: ${{ secrets.ECR_REPO }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          docker push "$ECR:latest"
+          docker push "$ECR:${COMMIT_SHA}"

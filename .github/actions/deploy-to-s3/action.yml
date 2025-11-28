@@ -1,60 +1,44 @@
-name: 'Deploy to S3'
-description: 'Deploy build artifacts to S3'
+name: "Deploy to S3"
+description: "Deploy build artifacts to S3"
 
 inputs:
   app-type:
-    description: 'Type of application'
+    description: "Type of application"
     required: true
   app-id:
-    description: 'ID of the application'
+    description: "ID of the application"
     required: true
   config-path:
-    description: 'Path to config.json'
-    required: true
-  #aws-access-key-id:
-    description: 'AWS access key ID'
-    required: true
-  #aws-secret-access-key:
-    description: 'AWS secret access key'
+    description: "Path to config.json"
     required: true
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Configure AWS
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        #aws-access-key-id: ${{ inputs.aws-access-key-id }}
-        #aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
-        aws-region: us-east-1  # Default region for SSM calls
+        aws-region: ap-south-1
 
     - name: Get S3 bucket from SSM
       id: ssm
       shell: bash
       run: |
-        PREFIX="/${{ inputs.app-type }}/${{ inputs.app-id }}"
-        
-        # Get bucket name from SSM
+        PREFIX="/hosting-template/frontend"
+
         BUCKET_PARAM="${PREFIX}/bucket"
         BUCKET=$(aws ssm get-parameter \
           --name "$BUCKET_PARAM" \
           --query 'Parameter.Value' \
           --output text 2>/dev/null || echo "")
-          
+
         if [ -z "$BUCKET" ]; then
-          echo "::error::Could not find S3 bucket in SSM at $BUCKET_PARAM"
+          echo "::error::Could not find S3 bucket at $BUCKET_PARAM"
           exit 1
         fi
-        
-        # Get region from SSM or use default
-        REGION_PARAM="${PREFIX}/region"
-        REGION=$(aws ssm get-parameter \
-          --name "$REGION_PARAM" \
-          --query 'Parameter.Value' \
-          --output text 2>/dev/null || echo "us-east-1")
-          
+
         echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
-        echo "region=$REGION" >> $GITHUB_OUTPUT
+        echo "region=ap-south-1" >> $GITHUB_OUTPUT
 
     - name: Download artifact
       uses: actions/download-artifact@v4
@@ -67,7 +51,7 @@ runs:
       run: |
         aws s3 sync \
           ./deploy \
-          s3://${{ steps.config.outputs.bucket }} \
+          s3://${{ steps.ssm.outputs.bucket }} \
           --delete \
           --acl public-read \
           --cache-control "public, max-age=31536000, immutable"
