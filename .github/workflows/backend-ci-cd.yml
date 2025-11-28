@@ -1,0 +1,60 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: ["master"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  backend-ci-cd:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: ap-south-1
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: backend-ci-cd
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker Image
+        run: |
+          ECR="${{ secrets.ECR_REPO }}"
+          docker build -t "$ECR:latest" app/backend_api/
+          docker tag "$ECR:latest" "$ECR:${{ github.sha }}"
+
+      - name: Push Image to ECR
+        run: |
+          ECR="${{ secrets.ECR_REPO }}"
+          docker push "$ECR:latest"
+          docker push "$ECR:${{ github.sha }}"
+
+      - name: Update SSM Parameter (image_uri)
+        run: |
+          IMAGE="${{ secrets.ECR_REPO }}:${{ github.sha }}"
+          aws ssm put-parameter \
+            --name "/hosting-template/compute/backend/image_uri" \
+            --value "$IMAGE" \
+            --type String \
+            --overwrite
+          echo "Updated SSM image_uri → $IMAGE"
+
+      - name: Restart Backend (ASG Refresh)
+        run: |
+          ASG_NAME="hosting-template-asg"
+
+          echo "🚀 Triggering ASG refresh"
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name "$ASG_NAME" \
+            --strategy Rolling || true
+
+          echo "ASG refresh triggered (no safety checks, no overrides)"
