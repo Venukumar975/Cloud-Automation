@@ -1,6 +1,6 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
-const { auth } = require("../middleware/authMiddleWare");
+const { auth } = require("../middleware/authMiddleware");
 const redis = require("../config/redis");
 const { Session, Attendance, Student, SessionClass } = require("../models");
 require("dotenv").config();
