@@ -12,7 +12,7 @@ permissions:
   id-token: write
 
 env:
-  SSM_PREFIX: /platform/backend
+  SSM_PREFIX: /hosting-template/compute/backend
   DEFAULT_AWS_REGION: ap-south-1
 
 jobs:
