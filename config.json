@@ -15,7 +15,7 @@
 
     "frontend": {
       "source_2": {
-        "directory": "app/teacher_app",
+        "directory": "app/frontend",
         "type": "node",
         "version": "18",
         "install-command": "npm install",
