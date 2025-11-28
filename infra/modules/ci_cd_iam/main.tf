@@ -86,7 +86,21 @@ resource "aws_iam_policy" "github_actions_policy" {
           "ssm:GetParameter"
         ],
         Resource = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/compute/*"
+      },
+      # Allow CI/CD to GET backend + frontend SSM parameters
+      {
+        Effect = "Allow",
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParameterHistory"
+        ],
+        Resource = [
+          "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/compute/*",
+          "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/frontend/*"
+        ]
       }
+
     ]
   })
 }
