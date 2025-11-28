@@ -10,6 +10,7 @@ permissions:
   contents: read
   packages: read
   statuses: write
+  id-token: write
 
 jobs:
   prepare-matrix:
