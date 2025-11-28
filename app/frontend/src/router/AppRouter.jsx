@@ -25,7 +25,7 @@ export default function AppRouter() {
           element={<SessionReviewPage />}
         />
         <Route path="/report" element={<ReportPage />} />
-        {/* other pages will be added */}
+        {/* other pages will be added later */}
       </Routes>
     </BrowserRouter>
   );

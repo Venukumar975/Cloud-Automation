@@ -4,46 +4,77 @@ on:
   push:
     branches: ["master"]
     paths:
-      - "app/**"
-      - "config.json"
-      - ".github/workflows/frontend-ci.yml"
+      - "app/frontend/**"
+      - ".github/workflows/frontend.yml"
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  discover-modules:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.read.outputs.matrix }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install jq
-        run: sudo apt-get install -y jq
-      - name: Read frontend modules
-        id: read
-        run: |
-          FRONTEND=$(jq -c '.apps.frontend | keys' config.json)
-          echo "matrix=$FRONTEND" >> $GITHUB_OUTPUT
-
   build-and-deploy:
-    needs: discover-modules
-    strategy:
-      matrix:
-        app-id: ${{ fromJson(needs.discover-modules.outputs.matrix) }}
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Build and Test
-        uses: ./.github/actions/build-and-test
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          app-type: frontend
-          app-id: ${{ matrix.app-id }}
-          config-path: ./config.json
+          node-version: 18
 
-      - name: Deploy to S3
-        uses: ./.github/actions/deploy-to-s3
+      - name: Install deps
+        working-directory: app/frontend
+        run: npm install
+
+      - name: Build React App
+        working-directory: app/frontend
+        run: npm run build
+
+      # -------------------------
+      # AWS CREDENTIALS VIA OIDC
+      # -------------------------
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          app-type: frontend
-          app-id: ${{ matrix.app-id }}
-          config-path: ./config.json
-          #aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          #aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: frontend-session
+
+      # ------------------------------------
+      # Get bucket + cloudfront from SSM
+      # ------------------------------------
+      - name: Fetch S3 + CloudFront info
+        id: awsinfo
+        run: |
+          BUCKET=$(aws ssm get-parameter \
+            --name "/hosting-template/frontend/bucket" \
+            --query "Parameter.Value" \
+            --output text)
+
+          CF_ID=$(aws ssm get-parameter \
+            --name "/hosting-template/frontend/cdn_id" \
+            --query "Parameter.Value" \
+            --output text)
+
+          echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
+          echo "cf_id=$CF_ID" >> $GITHUB_OUTPUT
+
+      # -------------------------
+      # DEPLOY TO S3
+      # -------------------------
+      - name: Upload to S3
+        run: |
+          aws s3 sync app/frontend/dist \
+            s3://${{ steps.awsinfo.outputs.bucket }} \
+            --delete
+
+      # -------------------------
+      # INVALIDATE CLOUDFRONT
+      # -------------------------
+      - name: CloudFront Invalidation
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.awsinfo.outputs.cf_id }} \
+            --paths "/*"
