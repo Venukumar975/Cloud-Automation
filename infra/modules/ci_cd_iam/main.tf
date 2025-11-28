@@ -77,6 +77,15 @@ resource "aws_iam_policy" "github_actions_policy" {
           "cloudfront:CreateInvalidation"
         ],
         Resource = "*"
+      },
+      # Allow GitHub Actions to update image URI in SSM
+      {
+        Effect = "Allow",
+        Action = [
+          "ssm:PutParameter",
+          "ssm:GetParameter"
+        ],
+        Resource = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/compute/*"
       }
     ]
   })

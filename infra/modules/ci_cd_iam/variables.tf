@@ -11,3 +11,7 @@ variable "repo" {
   type        = string
   description = "Repository name for CI/CD trust restriction"
 }
+
+variable "region" {
+  type = string
+}

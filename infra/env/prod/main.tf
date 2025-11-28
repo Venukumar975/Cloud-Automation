@@ -91,7 +91,7 @@ module "ecr" {
 module "ci_cd_iam" {
   source       = "../../modules/ci_cd_iam"
   project_name = var.project_name
-
+  region = var.region
   owner = var.owner
   repo  = var.repo
 }
