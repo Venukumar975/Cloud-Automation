@@ -2,7 +2,7 @@ name: Deploy (Platform - SSM)
 
 on:
   workflow_run:
-    workflows: ["Stack-Agnostic CI"]
+    workflows: ["Backend CI"]
     types: [completed]
 
 permissions:
