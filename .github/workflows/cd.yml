@@ -103,7 +103,7 @@ jobs:
           PREFIX="${{ env.SSM_PREFIX }}"
           ID="${{ matrix.app-id }}"
 
-          KEYS=(image_repo asg_name region port health_path instance_warmup min_healthy_percent user_data_template ssm_param_name)
+          KEYS=(image_repo asg_name image_uri region port health_path instance_warmup min_healthy_percent user_data_template ssm_param_name)
 
           for k in "${KEYS[@]}"; do
             P="${PREFIX}/${ID}/${k}"
