@@ -103,7 +103,7 @@ jobs:
           PREFIX="${{ env.SSM_PREFIX }}"
           ID="${{ matrix.app-id }}"
 
-          KEYS=(image_repo asg_name image_uri region port health_path instance_warmup min_healthy_percent user_data_template ssm_param_name)
+          KEYS=(image_repo asg_name region port health_path instance_warmup min_healthy_percent user_data_template ssm_param_name)
 
           for k in "${KEYS[@]}"; do
             P="${PREFIX}/${k}"
@@ -145,22 +145,35 @@ jobs:
             exit 0
           fi
 
-          STATUS=$(aws autoscaling describe-instance-refreshes \
+          # Check for any in-progress refreshes
+          CURRENT_REFRESH=$(aws autoscaling describe-instance-refreshes \
             --auto-scaling-group-name "$ASG" \
-            --max-records 1 \
-            --query 'InstanceRefreshes[0].Status' --output text 2>/dev/null || echo "NONE")
+            --query 'InstanceRefreshes[?Status==`InProgress`]' \
+            --output json)
 
-          if [ "$STATUS" = "InProgress" ]; then
-            echo "Refresh already running"
-            echo "refresh_id=" >> $GITHUB_OUTPUT
-            exit 0
+          # If there's an in-progress refresh, cancel it
+          if [ "$(echo "$CURRENT_REFRESH" | jq 'length')" -gt 0 ]; then
+            REFRESH_ID=$(echo "$CURRENT_REFRESH" | jq -r '.[0].InstanceRefreshId')
+            echo "Cancelling in-progress refresh: $REFRESH_ID"
+            aws autoscaling cancel-instance-refresh \
+              --auto-scaling-group-name "$ASG" \
+              --instance-refresh-id "$REFRESH_ID" || true
+          
+            # Wait for the cancellation to complete
+            echo "Waiting for cancellation to complete..."
+            aws autoscaling wait instance-refresh-cancelled \
+              --auto-scaling-group-name "$ASG" \
+              --instance-refresh-ids "$REFRESH_ID" || true
           fi
 
+          # Start a new refresh
+          echo "Starting new instance refresh..."
           RID=$(aws autoscaling start-instance-refresh \
             --auto-scaling-group-name "$ASG" \
             --strategy Rolling \
             --query 'InstanceRefreshId' --output text)
 
+          echo "Started new refresh: $RID"
           echo "refresh_id=$RID" >> $GITHUB_OUTPUT
 
       - name: Get previous stable version
