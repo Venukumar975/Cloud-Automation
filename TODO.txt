@@ -4,3 +4,7 @@ put the vars in a folder for user to change and then read em
 put s3 bucket for backend
 
 see about missing vars in plat.yaml
+
+
+fix cloud front
+get iam role of git (aws assumed)
