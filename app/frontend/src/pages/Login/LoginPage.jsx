@@ -48,12 +48,7 @@ export default function LoginPage() {
       <div className="bg-gray-200/80 backdrop-blur-md p-10 rounded-xl shadow-2xl w-full max-w-md border border-white/20">
         {/* Logo */}
         <div className="flex justify-center mb-6">
-          <img
-            src="/public/logo.png" 
-            {/* should change path here, (CI_CD TEST)*/}
-            alt="Institute Logo"
-            className="h-20"
-          />
+          <img src="/public/logo.png" alt="Institute Logo" className="h-20" />
         </div>
 
         {/* Title */}
