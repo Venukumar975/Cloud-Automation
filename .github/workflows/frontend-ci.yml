@@ -2,7 +2,7 @@ name: Frontend CI/CD
 
 on:
   push:
-    branches: ["main"]
+    branches: ["master"]
     paths:
       - "app/**"
       - "config.json"
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Build and Test
         uses: ./.github/actions/build-and-test
         with:
