@@ -106,7 +106,7 @@ jobs:
           KEYS=(image_repo asg_name image_uri region port health_path instance_warmup min_healthy_percent user_data_template ssm_param_name)
 
           for k in "${KEYS[@]}"; do
-            P="${PREFIX}/${ID}/${k}"
+            P="${PREFIX}/${k}"
             V=$(aws ssm get-parameter --name "$P" --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || echo "")
             echo "${k}=$V" >> $GITHUB_OUTPUT
           done
