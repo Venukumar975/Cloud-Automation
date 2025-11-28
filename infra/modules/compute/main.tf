@@ -196,3 +196,9 @@ resource "aws_ssm_parameter" "image_uri" {
   type  = "String"
   value = "dummy" # overwritten by CI/CD
 }
+
+resource "aws_ssm_parameter" "asg_name" {
+  name  = "/${var.project_name}/compute/${var.service_name}/asg_name"
+  type  = "String"
+  value = aws_autoscaling_group.app_asg.name
+}
