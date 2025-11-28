@@ -93,7 +93,8 @@ resource "aws_iam_policy" "github_actions_policy" {
         Action = [
           "ssm:GetParameter",
           "ssm:GetParameters",
-          "ssm:GetParameterHistory"
+          "ssm:GetParameterHistory",
+          "ssm:GetParametersByPath"
         ],
         Resource = [
           "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/compute/*",
