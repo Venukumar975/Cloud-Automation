@@ -12,6 +12,18 @@ inputs:
     description: 'Path to config.json'
     required: true
 
+outputs:
+  stack:
+    description: 'The stack type (node, python, java, etc.)'
+  dir:
+    description: 'The working directory for the application'
+  install_cmd:
+    description: 'The command to install dependencies'
+  build_cmd:
+    description: 'The command to build the application'
+  test_cmd:
+    description: 'The command to run tests'
+
 runs:
   using: 'composite'
   steps:
@@ -40,6 +52,8 @@ runs:
         echo "install_cmd=$INSTALL_CMD" >> $GITHUB_OUTPUT
         echo "build_cmd=$BUILD_CMD" >> $GITHUB_OUTPUT
         echo "test_cmd=$TEST_CMD" >> $GITHUB_OUTPUT
+
+    # Rest of the steps remain the same...
 
     - name: Setup Node.js
       if: ${{ steps.setup.outputs.stack == 'node' }}

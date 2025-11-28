@@ -1,53 +1,36 @@
-name: Frontend CI/CD
+name: Frontend CI
 
 on:
   push:
     branches: ["master"]
     paths:
-      - "app/**"
-      - "config.json"
+      - "app/frontend/**"
       - ".github/workflows/frontend-ci.yml"
 
 permissions:
   contents: read
-  id-token: write
-  packages: read
-  statuses: write
 
 jobs:
-  discover-modules:
+  build-and-test:
     runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.read.outputs.matrix }}
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Install jq
-        run: sudo apt-get update -y && sudo apt-get install -y jq
-      - name: Read frontend modules
-        id: read
-        run: |
-          FRONTEND=$(jq -c '.apps.frontend | keys' config.json)
-          echo "matrix=$FRONTEND" >> $GITHUB_OUTPUT
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  build-and-deploy:
-    needs: discover-modules
-    strategy:
-      matrix:
-        app-id: ${{ fromJson(needs.discover-modules.outputs.matrix) }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build and Test
-        uses: ./.github/actions/build-and-test
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          app-type: frontend
-          app-id: ${{ matrix.app-id }}
-          config-path: ./config.json
+          node-version: 18
 
-      - name: Deploy to S3
-        uses: ./.github/actions/deploy-to-s3
-        with:
-          app-type: frontend
-          app-id: ${{ matrix.app-id }}
-          config-path: ./config.json
+      - name: Install dependencies
+        working-directory: app/frontend
+        run: npm install
+
+      - name: Run tests
+        working-directory: app/frontend
+        run: npm test -- --watchAll=false
+
+      - name: Build React App
+        working-directory: app/frontend
+        run: npm run build

@@ -5,7 +5,24 @@ locals {
 # Get AWS Account ID
 data "aws_caller_identity" "current" {}
 
-# IAM Role for GitHub CI/CD to access AWS ECR + ASG + S3 deploy
+# ---------------------------
+#  GitHub OIDC Provider
+# ---------------------------
+resource "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+
+  client_id_list = [
+    "sts.amazonaws.com"
+  ]
+
+  thumbprint_list = [
+    "6938fd4d98bab03faadb97b34396831e3780aea1"
+  ]
+}
+
+# ---------------------------
+#  Role for GitHub Actions
+# ---------------------------
 resource "aws_iam_role" "github_actions" {
   name = "${local.name}-github-role"
 
@@ -20,6 +37,7 @@ resource "aws_iam_role" "github_actions" {
         Action = "sts:AssumeRoleWithWebIdentity",
         Condition = {
           StringLike = {
+            # IMPORTANT: Restrict to your repo
             "token.actions.githubusercontent.com:sub" = "repo:${var.owner}/${var.repo}:*"
           },
           StringEquals = {
@@ -31,14 +49,19 @@ resource "aws_iam_role" "github_actions" {
   })
 }
 
-
+# ---------------------------
+#  IAM Policy for CI/CD
+# ---------------------------
 resource "aws_iam_policy" "github_actions_policy" {
   name = "${local.name}-policy"
 
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
-      # ECR Push/Pull
+
+      #######################################################################
+      # ECR Permissions
+      #######################################################################
       {
         Effect = "Allow",
         Action = [
@@ -51,16 +74,23 @@ resource "aws_iam_policy" "github_actions_policy" {
         ],
         Resource = "*"
       },
-      # AutoScaling Rolling Deployment
+
+      #######################################################################
+      # Auto Scaling Actions (FULL FIX)
+      #######################################################################
       {
         Effect = "Allow",
         Action = [
           "autoscaling:StartInstanceRefresh",
-          "autoscaling:DescribeAutoScalingGroups"
+          "autoscaling:DescribeAutoScalingGroups",
+          "autoscaling:DescribeInstanceRefreshes"   # <--- REQUIRED
         ],
         Resource = "*"
       },
-      # S3 Frontend Deploy + CloudFront Invalidate
+
+      #######################################################################
+      # S3 Deploy (Frontend)
+      #######################################################################
       {
         Effect = "Allow",
         Action = [
@@ -71,6 +101,10 @@ resource "aws_iam_policy" "github_actions_policy" {
         ],
         Resource = "*"
       },
+
+      #######################################################################
+      # CloudFront Invalidations (Frontend Deploy)
+      #######################################################################
       {
         Effect = "Allow",
         Action = [
@@ -78,7 +112,12 @@ resource "aws_iam_policy" "github_actions_policy" {
         ],
         Resource = "*"
       },
-      # Allow GitHub Actions to update image URI in SSM
+
+      #######################################################################
+      # SSM PARAMETER STORE — READ/WRITE
+      #######################################################################
+
+      # Backend CI writes: /<project_name>/compute/*
       {
         Effect = "Allow",
         Action = [
@@ -87,7 +126,8 @@ resource "aws_iam_policy" "github_actions_policy" {
         ],
         Resource = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/compute/*"
       },
-      # Allow CI/CD to GET backend + frontend SSM parameters
+
+      # Allow CI & Deploy to read backend & frontend
       {
         Effect = "Allow",
         Action = [
@@ -108,21 +148,9 @@ resource "aws_iam_policy" "github_actions_policy" {
   })
 }
 
-resource "aws_iam_openid_connect_provider" "github" {
-  url = "https://token.actions.githubusercontent.com"
-
-  client_id_list = [
-    "sts.amazonaws.com"
-  ]
-
-  thumbprint_list = [
-    # GitHub Actions root CA thumbprint
-    "6938fd4d98bab03faadb97b34396831e3780aea1"
-  ]
-}
-
-
-# Attach Role + Policy
+# ---------------------------
+# Attach Policy to Role
+# ---------------------------
 resource "aws_iam_role_policy_attachment" "github_attach" {
   role       = aws_iam_role.github_actions.name
   policy_arn = aws_iam_policy.github_actions_policy.arn
