@@ -27,7 +27,7 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [offset]);
 
-  // Fetch courses
+  // Fetch courses list
   useEffect(() => {
     if (!token) return;
 
