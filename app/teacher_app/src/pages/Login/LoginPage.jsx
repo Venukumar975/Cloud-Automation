@@ -49,7 +49,8 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex justify-center mb-6">
           <img
-            src="/src/assets/logo.png"
+            src="/public/logo.png" 
+            {/* should change path here, (CI_CD TEST)*/}
             alt="Institute Logo"
             className="h-20"
           />
