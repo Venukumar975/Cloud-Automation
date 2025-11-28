@@ -29,7 +29,7 @@ jobs:
       - name: Build Docker image
         run: |
           ECR="${{ secrets.ECR_REPO }}"
-          docker build -t "$ECR:latest" app/backend_api/
+          docker build -t "$ECR:latest" app/backend_p/
           docker tag "$ECR:latest" "$ECR:${{ github.sha }}"
 
       - name: Push Image
@@ -46,8 +46,28 @@ jobs:
             --type String \
             --overwrite
 
-      - name: Refresh ASG
+      - name: Refresh ASG Safely
         run: |
+          ASG_NAME="hosting-template-asg"
+
+          echo "🔍 Checking if an Instance Refresh is already running..."
+
+          CURRENT_STATUS=$(aws autoscaling describe-instance-refreshes \
+            --auto-scaling-group-name "$ASG_NAME" \
+            --max-records 1 \
+            --query "InstanceRefreshes[0].Status" \
+            --output text 2>/dev/null || echo "NONE")
+
+          echo "Current Refresh Status: $CURRENT_STATUS"
+
+          if [ "$CURRENT_STATUS" = "InProgress" ]; then
+            echo "A refresh is already in progress. Skipping new refresh."
+            exit 0
+          fi
+
+          echo "🚀Starting new instance refresh..."
           aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name "hosting-template-asg" \
+            --auto-scaling-group-name "$ASG_NAME" \
             --strategy Rolling
+
+          echo "Instance refresh triggered successfully."

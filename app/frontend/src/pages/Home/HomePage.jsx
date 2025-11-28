@@ -114,7 +114,7 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
-        {/* Course/Class Selection , CI_CD TEST 3*/}
+        {/* Course/Class Selection , CI_CD TEST 4*/}
         <Card className="max-w-5xl mx-auto shadow-xl border border-gray-200 bg-white/30 backdrop-blur-md rounded-3xl">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-gray-900">
