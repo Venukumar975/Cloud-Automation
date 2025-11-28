@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const { Teacher, Student, Class } = require("../models");
 const router = express.Router();
 
-// POST /api/auth/login
+// POST, /api/auth/login
 router.post("/login/", async (req, res) => {
   try {
     const { email, password, role } = req.body;
