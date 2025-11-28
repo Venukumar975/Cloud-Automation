@@ -6,8 +6,10 @@ on:
     types: [completed]
 
 permissions:
-  id-token: write
   contents: read
+  packages: read
+  statuses: write
+  id-token: write
 
 env:
   SSM_PREFIX: /platform/backend
