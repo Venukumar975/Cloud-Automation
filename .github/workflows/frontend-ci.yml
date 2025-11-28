@@ -66,7 +66,7 @@ jobs:
       # -------------------------
       - name: Upload to S3
         run: |
-          aws s3 sync app/frontend/build \
+          aws s3 sync app/frontend/dist \
             s3://${{ steps.awsinfo.outputs.bucket }} \
             --delete
 
