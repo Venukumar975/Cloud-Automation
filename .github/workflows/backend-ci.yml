@@ -29,7 +29,7 @@ jobs:
       - name: Build Docker image
         run: |
           ECR="${{ secrets.ECR_REPO }}"
-          docker build -t "$ECR:latest" /app/backend_api/
+          docker build -t "$ECR:latest" backend/
           docker tag "$ECR:latest" "$ECR:${{ github.sha }}"
 
       - name: Push Image
