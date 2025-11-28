@@ -1,0 +1,80 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - "app/frontend/**"
+      - ".github/workflows/frontend.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install deps
+        working-directory: app/frontend
+        run: npm install
+
+      - name: Build React App
+        working-directory: app/frontend
+        run: npm run build
+
+      # -------------------------
+      # AWS CREDENTIALS VIA OIDC
+      # -------------------------
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: ap-south-1
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: frontend-session
+
+      # ------------------------------------
+      # Get bucket + cloudfront from SSM
+      # ------------------------------------
+      - name: Fetch S3 + CloudFront info
+        id: awsinfo
+        run: |
+          BUCKET=$(aws ssm get-parameter \
+            --name "/hosting-template/frontend/bucket" \
+            --query "Parameter.Value" \
+            --output text)
+
+          CF_ID=$(aws ssm get-parameter \
+            --name "/hosting-template/frontend/cdn_doamin" \
+            --query "Parameter.Value" \
+            --output text)
+
+          echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
+          echo "cf_id=$CF_ID" >> $GITHUB_OUTPUT
+
+      # -------------------------
+      # DEPLOY TO S3
+      # -------------------------
+      - name: Upload to S3
+        run: |
+          aws s3 sync app/frontend/build \
+            s3://${{ steps.awsinfo.outputs.bucket }} \
+            --delete
+
+      # -------------------------
+      # INVALIDATE CLOUDFRONT
+      # -------------------------
+      - name: CloudFront Invalidation
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.awsinfo.outputs.cf_id }} \
+            --paths "/*"
