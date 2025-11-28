@@ -54,7 +54,7 @@ jobs:
             --output text)
 
           CF_ID=$(aws ssm get-parameter \
-            --name "/hosting-template/frontend/cdn_domain" \
+            --name "/hosting-template/frontend/cdn_id" \
             --query "Parameter.Value" \
             --output text)
 
