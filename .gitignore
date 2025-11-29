@@ -5,3 +5,5 @@ infra/env/prod/tfplan
 infra/env/prod/terraform.tfstate
 infra/env/prod/terraform.tfstate.ba
 infra/env/prod/.terraform.lock.hcl
+infra/env/prod/terraform.tfstate.backup
+infra/env/prod/terraform.tfstate
