@@ -73,11 +73,13 @@ module "frontend" {
 
 module "monitoring" {
   source = "../../modules/monitoring"
-
-  project_name              = var.project_name
-  asg_name                  = module.compute.asg_name
-  asg_policy_scale_out_arn  = module.compute.scale_out_policy_arn
-  asg_policy_scale_in_arn   = module.compute.scale_in_policy_arn
+  
+  project_name = var.project_name
+  
+  # 🔴 DELETE THESE LINES (Module doesn't need them anymore):
+  # asg_name                 = module.compute.asg_name
+  # asg_policy_scale_out_arn = module.compute.scale_out_policy_arn
+  # asg_policy_scale_in_arn  = module.compute.scale_in_policy_arn
 }
 
 module "ecr" {

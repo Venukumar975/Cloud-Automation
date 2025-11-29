@@ -1,0 +1,13 @@
+"backend":
+  "backend":
+    "asg_name": "hosting-template-asg"
+    "image_repo": "654290653206.dkr.ecr.ap-south-1.amazonaws.com/hosting-template-backend-backend"
+    "launch_template_id": "lt-0a5bdc2dc7eb5277c"
+    "port": 80
+    "region": "ap-south-1"
+    "ssm_param_name": "/hosting-template/compute/backend/image_tag"
+"frontend":
+  "frontend-app":
+    "bucket": "hosting-template-frontend-63e0e71b"
+    "cloudfront_id": "E3HACLVUAR7GAX"
+    "region": "ap-south-1"

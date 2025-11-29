@@ -1,13 +1,21 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>teacher_app</title>
-  </head>
-  <body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React & Express Text Analyzer</title>
+    <!-- Tailwind CSS is loaded via CDN for styling in App.jsx -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; }
+        #root { min-height: 100vh; }
+    </style>
+</head>
+<body>
+    <!-- The mount point for the React app -->
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+    
+    <!-- This loads the compiled JavaScript file created by the 'npm run build' command -->
+    <script src="/dist/bundle.js"></script>
+</body>
 </html>

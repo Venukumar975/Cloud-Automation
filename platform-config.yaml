@@ -10,7 +10,7 @@ network:
 
 compute:
   instance_type: "t3.micro"
-  app_port: 3000
+  app_port: 80
   scaling:
     min: 2
     max: 5

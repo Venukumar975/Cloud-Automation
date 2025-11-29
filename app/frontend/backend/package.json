@@ -1,11 +1,7 @@
 {
   "name": "text-analyzer-frontend",
   "version": "1.0.0",
-  "description": "React Frontend",
-  "scripts": {
-    "build": "webpack --mode development --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "description": "React Frontend for Text Analyzer",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
@@ -19,6 +15,10 @@
     "style-loader": "^3.3.3",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
+  },
+  "scripts": {
+    "build": "webpack --mode development --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC"

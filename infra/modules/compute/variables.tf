@@ -42,3 +42,24 @@ variable "container_port" {
   type        = number
   default = 3000
 }
+
+# Added for warm pool setup
+variable "warm_pool_min_size" {
+  description = "Minimum number of instances to keep in the Warm Pool"
+  type        = number
+  default     = 0
+}
+
+
+
+variable "warm_pool_state" {
+  description = "State of warm pool instances (Stopped or Running)"
+  type        = string
+  default     = "Stopped"
+}
+
+variable "emergency_cpu_threshold" {
+  description = "CPU % threshold to trigger emergency scaling"
+  type        = number
+  default     = 95
+}

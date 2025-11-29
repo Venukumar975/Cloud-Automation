@@ -8,11 +8,17 @@ output "asg_name" {
   value       = aws_autoscaling_group.app_asg.name
 }
 
-output "scale_out_policy_arn" {
-  description = "Scale Out Policy ARN"
-  value       = aws_autoscaling_policy.scale_out.arn
+# --- RENAMED FOR CLARITY ---
+output "target_tracking_policy_arn" {
+  description = "ARN of the Target Tracking Policy (50% CPU)"
+  value       = aws_autoscaling_policy.cpu_target_tracking.arn
 }
 
+# --- NEW OUTPUT ---
+output "emergency_scale_out_policy_arn" {
+  description = "ARN of the Emergency Step Scaling Policy (>85% CPU)"
+  value       = aws_autoscaling_policy.emergency_scale_out.arn
+}
 output "scale_in_policy_arn" {
   description = "Scale In Policy ARN"
   value       = aws_autoscaling_policy.scale_in.arn
